@@ -44,6 +44,11 @@ def extract_text_from_image(image):
     text = pytesseract.image_to_string(image)
     return text
 
+# Function to count the words in the text
+def word_count(text):
+    words = text.split()
+    return len(words)
+
 def main():
     st.title("Named Entity Recognition")
 
@@ -92,22 +97,29 @@ def main():
     # Input text area
     input_text = st.text_area("Enter your text here:", "")
 
+    # Check word count
+    num_words = word_count(input_text)
+    st.write(f"Word count: {num_words}/1000")
+
     # Button to trigger the NER processing
     if st.button("Process Text"):
         if input_text.strip() != "":
-            # Process the input text
-            entities = process_text(model, input_text)
-            
-            # Append input and output to history
-            st.session_state.history.append((input_text, entities))
-            
-            # Display the output
-            st.subheader("Entities found:")
-            if entities:
-                for entity, label in entities:
-                    st.write(f"- {entity} ({label})")
+            if num_words > 1000:
+                st.error("Word limit exceeded! Please shorten your text to 1000 words or less.")
             else:
-                st.write("No entities found.")
+                # Process the input text
+                entities = process_text(model, input_text)
+                
+                # Append input and output to history
+                st.session_state.history.append((input_text, entities))
+                
+                # Display the output
+                st.subheader("Entities found:")
+                if entities:
+                    for entity, label in entities:
+                        st.write(f"- {entity} ({label})")
+                else:
+                    st.write("No entities found.")
         else:
             st.write("Please enter some text to process.")
     
