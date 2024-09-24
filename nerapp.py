@@ -258,4 +258,17 @@ def main():
                     else:
                         st.write("No entities found.")
             
-            #
+            # Add download button for all history logs
+            if st.button("Download All Logs as PDF"):
+                history_pdf_buffer = create_pdf_history_log(st.session_state.history)
+                st.download_button(
+                    label="Download All Logs as PDF",
+                    data=history_pdf_buffer,
+                    file_name="all_history_logs.pdf",
+                    mime="application/pdf"
+                )
+        else:
+            st.write("No history yet.")
+
+if __name__ == "__main__":
+    main()
