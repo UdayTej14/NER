@@ -5,8 +5,12 @@ from PyPDF2 import PdfReader
 from docx import Document
 from PIL import Image
 import pytesseract
-pytesseract.pytesseract.tesseract_cmd = "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from datetime import datetime
+import os
 
+pytesseract.pytesseract.tesseract_cmd = "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
 
 st.set_page_config(
     page_title="NER",
@@ -26,9 +30,9 @@ def process_text(model, input_text):
 
 # Function to extract text from PDF
 def extract_text_from_pdf(file):
-    reader=PdfReader(file)
-    page=reader.pages[0]
-    text=page.extract_text()
+    reader = PdfReader(file)
+    page = reader.pages[0]
+    text = page.extract_text()
     return text
 
 # Function to extract text from Word document
@@ -49,6 +53,42 @@ def word_count(text):
     words = text.split()
     return len(words)
 
+# Function to log inputs and outputs to a PDF file
+def log_to_pdf(input_text, entities):
+    # Set the file path for the log
+    log_filename = "interaction_log.pdf"
+    log_exists = os.path.exists(log_filename)
+    
+    # Create or append to the PDF
+    c = canvas.Canvas(log_filename, pagesize=letter)
+    
+    # If the log file exists, we need to continue from the last page
+    if log_exists:
+        c.showPage()
+
+    c.setFont("Helvetica", 12)
+    
+    # Log time of interaction
+    c.drawString(100, 750, f"Interaction Log: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    # Log the input text
+    c.drawString(100, 730, f"User Input: {input_text[:100]}...")  # Log only first 100 characters
+    
+    # Log the detected entities
+    y_position = 710
+    if entities:
+        for entity, label in entities:
+            c.drawString(100, y_position, f"- {entity} ({label})")
+            y_position -= 20
+            if y_position < 50:  # Prevent overflow
+                c.showPage()
+                y_position = 750
+    else:
+        c.drawString(100, y_position, "No entities found.")
+    
+    c.showPage()
+    c.save()
+
 def main():
     st.title("Named Entity Recognition")
 
@@ -58,7 +98,7 @@ def main():
     # Initialize history using Streamlit session state
     if "history" not in st.session_state:
         st.session_state.history = []
-    
+
     uploaded_file = st.file_uploader("Upload PDF, Word Document, or Image", type=["pdf", "docx", "jpg", "jpeg", "png"])
 
     if uploaded_file is not None:
@@ -85,6 +125,9 @@ def main():
             
             # Append input and output to history
             st.session_state.history.append(("Uploaded Document", entities))
+
+            # Log to PDF
+            log_to_pdf("Uploaded Document", entities)
 
             # Display the output
             st.subheader("Entities found:")
@@ -113,6 +156,9 @@ def main():
                 # Append input and output to history
                 st.session_state.history.append((input_text, entities))
                 
+                # Log to PDF
+                log_to_pdf(input_text, entities)
+
                 # Display the output
                 st.subheader("Entities found:")
                 if entities:
