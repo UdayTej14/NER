@@ -104,6 +104,49 @@ def create_pdf_log(input_text, entities):
 
     return buffer
 
+# Function to create a PDF for the entire history of logs
+def create_pdf_history_log(history):
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    x = 40  # Left margin
+    y = 750  # Starting height from the top
+
+    # Title
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(x, y, "Complete History Log")
+    y -= 30
+
+    for i, (input_text, entities) in enumerate(history):
+        if y < 100:  # Add a new page if reaching the bottom
+            c.showPage()
+            y = 750
+        
+        # Add input text
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(x, y, f"Entry {i+1} - Input Text:")
+        y -= 20
+        c.setFont("Helvetica", 12)
+        y = wrap_text(c, input_text, x, y, 90)
+
+        # Add entities found
+        y -= 20
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(x, y, "Entities found:")
+        y -= 20
+        c.setFont("Helvetica", 12)
+        if entities:
+            for entity, label in entities:
+                y = wrap_text(c, f"- {entity} ({label})", x, y, 90)
+        else:
+            y = wrap_text(c, "No entities found.", x, y, 90)
+
+        y -= 40  # Add some space between entries
+
+    c.save()
+    buffer.seek(0)
+    return buffer
+
 def main():
     st.title("Named Entity Recognition")
 
@@ -214,8 +257,5 @@ def main():
                             st.write(f"- {entity} ({label})")
                     else:
                         st.write("No entities found.")
-        else:
-            st.write("No history yet.")
-
-if __name__ == "__main__":
-    main()
+            
+            #
