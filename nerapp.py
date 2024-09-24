@@ -5,10 +5,8 @@ from PyPDF2 import PdfReader
 from docx import Document
 from PIL import Image
 import pytesseract
-from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from datetime import datetime
-import os
+from io import BytesIO
 
 pytesseract.pytesseract.tesseract_cmd = "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
 
@@ -53,41 +51,27 @@ def word_count(text):
     words = text.split()
     return len(words)
 
-# Function to log inputs and outputs to a PDF file
-def log_to_pdf(input_text, entities):
-    # Set the file path for the log
-    log_filename = "interaction_log.pdf"
-    log_exists = os.path.exists(log_filename)
+# Function to create PDF log
+def create_pdf_log(input_text, entities):
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer)
     
-    # Create or append to the PDF
-    c = canvas.Canvas(log_filename, pagesize=letter)
+    c.drawString(100, 750, "Named Entity Recognition Log")
+    c.drawString(100, 730, f"Input Text: {input_text}")
     
-    # If the log file exists, we need to continue from the last page
-    if log_exists:
-        c.showPage()
-
-    c.setFont("Helvetica", 12)
-    
-    # Log time of interaction
-    c.drawString(100, 750, f"Interaction Log: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    # Log the input text
-    c.drawString(100, 730, f"User Input: {input_text[:100]}...")  # Log only first 100 characters
-    
-    # Log the detected entities
-    y_position = 710
+    c.drawString(100, 700, "Entities found:")
+    y = 680
     if entities:
         for entity, label in entities:
-            c.drawString(100, y_position, f"- {entity} ({label})")
-            y_position -= 20
-            if y_position < 50:  # Prevent overflow
-                c.showPage()
-                y_position = 750
+            c.drawString(100, y, f"- {entity} ({label})")
+            y -= 20
     else:
-        c.drawString(100, y_position, "No entities found.")
+        c.drawString(100, y, "No entities found.")
     
-    c.showPage()
     c.save()
+    buffer.seek(0)
+    
+    return buffer
 
 def main():
     st.title("Named Entity Recognition")
@@ -126,9 +110,6 @@ def main():
             # Append input and output to history
             st.session_state.history.append(("Uploaded Document", entities))
 
-            # Log to PDF
-            log_to_pdf("Uploaded Document", entities)
-
             # Display the output
             st.subheader("Entities found:")
             if entities:
@@ -136,6 +117,15 @@ def main():
                     st.write(f"- {entity} ({label})")
             else:
                 st.write("No entities found.")
+            
+            # Create PDF log and make it downloadable
+            pdf_buffer = create_pdf_log(text, entities)
+            st.download_button(
+                label="Download Log as PDF",
+                data=pdf_buffer,
+                file_name="ner_log.pdf",
+                mime="application/pdf"
+            )
     
     # Input text area
     input_text = st.text_area("Enter your text here:", "")
@@ -156,9 +146,6 @@ def main():
                 # Append input and output to history
                 st.session_state.history.append((input_text, entities))
                 
-                # Log to PDF
-                log_to_pdf(input_text, entities)
-
                 # Display the output
                 st.subheader("Entities found:")
                 if entities:
@@ -166,9 +153,18 @@ def main():
                         st.write(f"- {entity} ({label})")
                 else:
                     st.write("No entities found.")
+                
+                # Create PDF log and make it downloadable
+                pdf_buffer = create_pdf_log(input_text, entities)
+                st.download_button(
+                    label="Download Log as PDF",
+                    data=pdf_buffer,
+                    file_name="ner_log.pdf",
+                    mime="application/pdf"
+                )
         else:
             st.write("Please enter some text to process.")
-    
+
     # Sidebar for history
     with st.sidebar:
         st.title("History")
