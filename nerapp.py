@@ -11,7 +11,7 @@ from reportlab.lib import utils
 from io import BytesIO
 import textwrap
 
-#pytesseract.pytesseract.tesseract_cmd = "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+pytesseract.pytesseract.tesseract_cmd = "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
 
 st.set_page_config(
     page_title="NER",
